@@ -1,0 +1,5 @@
+.vs/*
+.idea/*
+.ipynb_checkpoints/*
+gamelib/__pycache__/*
+*.ipynb
