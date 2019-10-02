@@ -9,9 +9,11 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Normal
 
+import glob
 import os
 import subprocess
 import sys
+import json
 
 def run_game():
     print("Running game")
@@ -138,53 +140,62 @@ early_stop = False
 
 while frame_idx < max_frames and not early_stop:
 
-        log_probs = []
-        values    = []
-        states    = []
-        actions   = []
-        rewards   = []
-        masks     = []
-        entropy = 0
-
-        run_game()
-        # Parse result file
-        for _ in range(num_steps):
-            state = torch.FloatTensor(state).to(device)
-            dist, value = model(state)
-            
-            action = dist.sample()
-            next_state, reward, done, _ = envs.step(action.cpu().numpy())
-            
-            log_prob = dist.log_prob(action)
-            entropy += dist.entropy().mean()
-            
-            log_probs.append(log_prob)
-            values.append(value)
-            rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(device))
-            masks.append(torch.FloatTensor(1 - done).unsqueeze(1).to(device))
-            
-            states.append(state)
-            actions.append(action)
-            
-            state = next_state
-            frame_idx += 1
-            
-            if frame_idx % 1000 == 0:
-                test_reward = np.mean([test_env() for _ in range(10)])
-                test_rewards.append(test_reward)
-                plot(frame_idx, test_rewards)
-                if test_reward > threshold_reward: early_stop = True
+    log_probs = []
+    values    = []
+    states    = []
+    actions   = []
+    rewards   = []
+    masks     = []
+    entropy = 0
+    
+    run_game()
+    list_of_files = glob.glob("replays/*.replay") # * means all if need specific format then *.csv
+    latest_file = max(list_of_files, key=os.path.getctime)
+    assert latest_file.endswith(".replay")
+    with open(latest_file) as f:
+        for line in f:
+            line = line.replace("\n", "")
+            line = line.replace("\t", "")
+            if line != "":
+                board_state = json.loads(line)
+                # Do some shit with the board_state
+                state = torch.FloatTensor(state).to(device)
+                dist, value = model(state)
                 
+                action = dist.sample()
+                next_state, reward, done, _ = envs.step(action.cpu().numpy())
                 
-                next_state = torch.FloatTensor(next_state).to(device)
-                _, next_value = model(next_state)
-                returns = compute_gae(next_value, rewards, masks, values)
+                log_prob = dist.log_prob(action)
+                entropy += dist.entropy().mean()
                 
-                returns   = torch.cat(returns).detach()
-                log_probs = torch.cat(log_probs).detach()
-                values    = torch.cat(values).detach()
-                states    = torch.cat(states)
-                actions   = torch.cat(actions)
-                advantage = returns - values
+                log_probs.append(log_prob)
+                values.append(value)
+                rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(device))
+                masks.append(torch.FloatTensor(1 - done).unsqueeze(1).to(device))
                 
-                ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantage)
+                states.append(state)
+                actions.append(action)
+                
+                state = next_state
+                frame_idx += 1
+                
+                if frame_idx % 1000 == 0:
+                    test_reward = np.mean([test_env() for _ in range(10)])
+                    test_rewards.append(test_reward)
+                    plot(frame_idx, test_rewards)
+                    if test_reward > threshold_reward: early_stop = True
+            
+            
+    next_state = torch.FloatTensor(next_state).to(device)
+    _, next_value = model(next_state)
+    returns = compute_gae(next_value, rewards, masks, values)
+    
+    returns   = torch.cat(returns).detach()
+    log_probs = torch.cat(log_probs).detach()
+    values    = torch.cat(values).detach()
+    states    = torch.cat(states)
+    actions   = torch.cat(actions)
+    advantage = returns - values
+    
+    ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantage)
+            
