@@ -28,9 +28,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
-        self.model = ActorCritic()
-        self.model.load_state_dict(torch.load(file_path))
-        
+
     def on_game_start(self, config):
         """ 
         Read in config and perform any initial setup here 
@@ -45,16 +43,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         EMP = config["unitInformation"][4]["shorthand"]
         SCRAMBLER = config["unitInformation"][5]["shorthand"]
         # This is a good place to do initial setup
-        self.scored_on_locations = []        
+        self.scored_on_locations = []
+
+    
         
-    
-    def convert_gamestate_to_input(game_state):
-
-        return None
-    
-    def perform_action_using_output(output, game_state):
-
-        return None
 
     def on_turn(self, turn_state):
         """
