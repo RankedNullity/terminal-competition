@@ -33,7 +33,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         gamelib.debug_write('Random seed: {}'.format(seed))
         self.model = ActorCritic()
         # TODO: Specificy file_path
-        self.model.load_state_dict(torch.load(file_path))
+        self.model.load_state_dict(torch.load('run/weights'))
         self.actions = []
         
     def on_game_start(self, config):
@@ -194,18 +194,16 @@ class AlgoStrategy(gamelib.AlgoCore):
         game engine.
         """
         game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
+        gamelib.debug_write('Performing turn {} of the PPO-agent strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
         board_state, game_data = parse_gamestate(game_state)
         network_output = self.model.forward(board_state, game_data)
         perform_action_using_output(network_output, game_state)
         game_state.submit_turn()
-        with open('action_replay/actions.pickle', "W") as f:
+        with open('action_replay/actions.pickle', 'w') as f:
             pickle.dump(self.actions, f)
         
-
-
         
     def filter_blocked_locations(self, locations, game_state):
         filtered = []
