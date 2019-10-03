@@ -137,7 +137,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # TODO: Specificy file_path
         # self.model.load_state_dict(torch.load('models/temp1'))
         self.actions = []
-		self.last_board = None
+        self.last_board = None
         PIECE_TO_INT = {FILTER: 1, ENCRYPTOR: 2, DESTRUCTOR: 3, PING: 4, EMP: 5, SCRAMBLER: 6}
         INT_TO_PIECE = {1: FILTER, 2: ENCRYPTOR, 3: DESTRUCTOR, 4: PING, 5: EMP, 6: SCRAMBLER }
     
@@ -196,23 +196,21 @@ class AlgoStrategy(gamelib.AlgoCore):
         game_state = gamelib.GameState(self.config, turn_state)
         gamelib.debug_write('Performing turn {} of the PPO-agent strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
-		
-		board_state, game_data = parse_gamestate(game_state)
-		last_state, last_data = None, None
-		if last_board is None:
-			last_state = np.copy(board_state)
-			last_data = np.copy(game_data)
-		else:
-			last_state = last_board[0]
-			last_data = last_board[1]
-		
-		board_state = torch.from_numpy(board_state)
-		game_data = torch.from_numpy(game_data)
-		last_state = torch.from_numpy(board_state)
-		last_data = torch.from_numpy(board_state)
-		
-		conv_input = torch.cat((board_state, last_state), 0)
-		linear_input = torch.car((game_data, last_data), 0)
+        board_state, game_data = parse_gamestate(game_state)
+        last_state, last_data = None, None
+        if last_board is None:
+                last_state = np.copy(board_state)
+                last_data = np.copy(game_data)
+        else:
+                last_state = last_board[0]
+                last_data = last_board[1]
+        board_state = torch.from_numpy(board_state)
+        game_data = torch.from_numpy(game_data)
+        last_state = torch.from_numpy(board_state)
+        last_data = torch.from_numpy(board_state)
+
+        conv_input = torch.cat((board_state, last_state), 0)
+        linear_input = torch.car((game_data, last_data), 0)
 		
         network_output = self.model.forward(conv_input, linear_input)
         perform_action_using_output(network_output.numpy(), game_state)
@@ -227,11 +225,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         # Let's record at what position we get scored on
         state = json.loads(turn_string)
-		
-		turnInfo = state["turnInfo"]
-		if turnInfo[2] == 0:
-			board, data = parse_serialized_string(turn_string)
-			self.last_board = (board, data)
+        turnInfo = state["turnInfo"]
+        if turnInfo[2] == 0:
+                board, data = parse_serialized_string(turn_string)
+                self.last_board = (board, data)
 
 
 if __name__ == "__main__":
