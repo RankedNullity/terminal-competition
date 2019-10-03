@@ -178,7 +178,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                         move_board[x, y, 1] = chosen_type
 
         self.actions.append(move_board)
-        game_state.submit_turn()
 
     def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -197,7 +196,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
-        
+        board_state, game_data = parse_gamestate(game_state)
+        network_output = self.model.forward(board_state, game_data)
+        perform_action_using_output(network_output, game_state)
         game_state.submit_turn()
 
 
