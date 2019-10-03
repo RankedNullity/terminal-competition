@@ -4,10 +4,7 @@ import math
 import warnings
 from sys import maxsize
 import json
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+
 
 """
 Most of the algo code you write will be in this file unless you create new
@@ -33,7 +30,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """ 
         Read in config and perform any initial setup here 
         """
-        gamelib.debug_write('Configuring your custom algo strategy...')
+        gamelib.debug_write('Configuring starter algo strategy...')
         self.config = config
         global FILTER, ENCRYPTOR, DESTRUCTOR, PING, EMP, SCRAMBLER
         FILTER = config["unitInformation"][0]["shorthand"]
@@ -57,7 +54,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         game engine.
         """
         game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
+        gamelib.debug_write('Performing turn {} of the starter algo strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
         self.starter_strategy(game_state)
@@ -78,7 +75,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         For offense we will use long range EMPs if they place stationary units near the enemy's front.
         If there are no stationary units to attack in the front, we will send Pings to try and score quickly.
         """
-        game_state.attempt_spawn(EMP, [24, 10], 3)
         # First, place basic defenses
         self.build_defences(game_state)
         # Now build reactive defenses based on where the enemy scored

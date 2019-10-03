@@ -26,7 +26,7 @@ is_windows = sys.platform.startswith('win')
 print("Is windows: {}".format(is_windows))
 
 # Set default path for algos if script is run with no params
-default_algo = parent_dir + "\\python-algo\\run.ps1" if is_windows else parent_dir + "/python-algo/run.sh"
+default_algo = ".\\run_starter_strat.ps1" if is_windows else file_dir + "run.sh"
 algo1 = default_algo
 algo2 = default_algo
 
@@ -36,24 +36,7 @@ if len(sys.argv) > 1:
 if len(sys.argv) > 2:
     algo2 = sys.argv[2]
 
-# If folder path is given instead of run file path, add the run file to the path based on OS
-# trailing_char deals with if there is a trailing \ or / or not after the directory name
-if is_windows:
-    if "run.ps1" not in algo1:
-        trailing_char = "" if algo1.endswith("\\") else "\\"
-        algo1 = algo1 + trailing_char + "run.ps1"
-    if "run.ps1" not in algo2:
-        trailing_char = "" if algo2.endswith("\\") else "\\"
-        algo2 = algo2 + trailing_char + "run.ps1"
-else:
-    if "run.sh" not in algo1:
-        trailing_char = "" if algo1.endswith('/') else "/"
-        algo1 = algo1 + trailing_char + "run.sh"
-    if "run.sh" not in algo2:
-        trailing_char = "" if algo2.endswith('/') else "/"
-        algo2 = algo2 + trailing_char + "run.sh"
-
 print("Algo 1: ", algo1)
 print("Algo 2:", algo2)
 
-run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2))
+run_single_game("cd {} && java -jar engine.jar work {} {}".format(file_dir, algo1, algo2))
