@@ -5,6 +5,7 @@ import torch.optim as optim
 import numpy as np
 
 class TerminalAI(nn.Module):
+	'''Input size 56 x 28 x 2. Output size (14*15*18) x 1'''
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(4, 32, (8, 8), 4)
