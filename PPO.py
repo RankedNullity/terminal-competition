@@ -137,6 +137,7 @@ for game_idx in range(N_GAMES):
 
     assert len(states) == len(actions), "Found {} states in replay file, but {} actions in action replay file."
 
+
     for i, (state, action) in enumerate(zip(states, actions)):
         state = torch.FloatTensor(state).to(device)
         dist, value = model(state)
@@ -173,6 +174,8 @@ for game_idx in range(N_GAMES):
     advantage = returns - values
     
     ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantage)
+
+    torch.save(model.state_dict(), "run/weights")
 
     if game_idx % 1 == 0:
         print("Completed game {}/{}, total reward = {}".format(game_idx + 1, N_GAMES, total_reward))

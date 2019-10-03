@@ -33,7 +33,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         gamelib.debug_write('Random seed: {}'.format(seed))
         self.model = ActorCritic()
         # TODO: Specificy file_path
-        self.model.load_state_dict(torch.load('run/weights'))
+        # self.model.load_state_dict(torch.load('run/weights'))
         self.actions = []
         
     def on_game_start(self, config):
