@@ -15,49 +15,24 @@ import subprocess
 import sys
 import json
 
-def run_game():
-    print("Running game")
-    os.chdir(os.path.dirname(sys.argv[0]))
+from model import ActorCritic
+
+
+def run_single_game(process_command):
+    print("Start run a match")
     p = subprocess.Popen(
-        "java -jar engine.jar work %s %s" % ("algo_strategy.py", "algo_strategy.py"),
+        process_command,
         shell=True,
         stdout=sys.stdout,
         stderr=sys.stderr
-    )
+        )
+    # daemon necessary so game shuts down if this script is shut down by user
+    p.daemon = 1
+    p.wait()
+    print("Finished running match")
 
 use_cuda = torch.cuda.is_available()
 device   = torch.device("cuda" if use_cuda else "cpu")
-
-def init_weights(m):
-    if isinstance(m, nn.Linear):
-        nn.init.normal_(m.weight, mean=0., std=0.1)
-        nn.init.constant_(m.bias, 0.1)
-        
-class ActorCritic(nn.Module):
-    def __init__(self, num_inputs, num_outputs, hidden_size, std=0.0):
-        super(ActorCritic, self).__init__()
-        
-        self.critic = nn.Sequential(
-            nn.Linear(num_inputs, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, 1)
-        )
-        
-        self.actor = nn.Sequential(
-            nn.Linear(num_inputs, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, num_outputs),
-        )
-        self.log_std = nn.Parameter(torch.ones(1, num_outputs) * std)
-        
-        self.apply(init_weights)
-        
-    def forward(self, x):
-        value = self.critic(x)
-        mu    = self.actor(x)
-        std   = self.log_std.exp().expand_as(mu)
-        dist  = Normal(mu, std)
-        return dist, value
 
 def plot(frame_idx, rewards):
     clear_output(True)
@@ -117,8 +92,6 @@ def ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns,
             loss.backward()
             optimizer.step()
 
-num_inputs  = envs.observation_space.shape[0]
-num_outputs = envs.action_space.shape[0]
 
 #Hyper params:
 hidden_size      = 256
@@ -128,14 +101,12 @@ mini_batch_size  = 5
 ppo_epochs       = 4
 threshold_reward = -200
 
-model = ActorCritic(num_inputs, num_outputs, hidden_size).to(device)
+model = ActorCritic().to(device)
 optimizer = optim.Adam(model.parameters(), lr=lr)
 
 frame_idx  = 0
 test_rewards = []
 
-state = envs.reset()
-early_stop = False
 
 N_GAMES = 100
 
@@ -143,7 +114,7 @@ for game_idx in range(N_GAMES):
     list_of_action_replays = glob.glob("action_replay/*.pickle")
     latest_action = max(list_of_action_replays, key=os.path.getctime)
     with open(latest_action):
-    actions = pickle.load(latest_action)
+        actions = pickle.load(latest_action)
 
     log_probs = []
     values    = []
@@ -152,7 +123,7 @@ for game_idx in range(N_GAMES):
     masks     = []
     entropy = 0
 
-    run_game()
+    run_single_game("cd {} && java -jar engine.jar work {} {}".format("..", "algo_strategy.py", "algo_strategy.py"))
 
     list_of_files = glob.glob("replays/*.replay") # * means all if need specific format then *.csv
     latest_file = max(list_of_files, key=os.path.getctime)

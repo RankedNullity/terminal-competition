@@ -2,5 +2,7 @@
 .idea/*
 .ipynb_checkpoints/*
 gamelib/__pycache__/*
+__pycache__/
 *.ipynb
 *.replay
+run/*
