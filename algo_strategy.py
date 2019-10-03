@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import PPO.ActorCritic
 from random import choices
+import pickle
 
 """
 Most of the algo code you write will be in this file unless you create new
@@ -200,6 +201,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         network_output = self.model.forward(board_state, game_data)
         perform_action_using_output(network_output, game_state)
         game_state.submit_turn()
+        with open('action_replay/actions.pickle', "W") as f:
+            pickle.dump(self.actions, f)
+        
 
 
         
