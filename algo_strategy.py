@@ -31,10 +31,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
-        self.model = ActorCritic()
-        # TODO: Specificy file_path
-        # self.model.load_state_dict(torch.load('run/weights'))
-        self.actions = []
         
     def on_game_start(self, config):
         """ 
@@ -51,6 +47,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         SCRAMBLER = config["unitInformation"][5]["shorthand"]
         # This is a good place to do initial setup
         self.scored_on_locations = []
+        self.model = ActorCritic()
+        # TODO: Specificy file_path
+        # self.model.load_state_dict(torch.load('run/weights'))
+        self.actions = []
 
         PIECE_TO_INT = {FILTER: 1, ENCRYPTOR: 2, DESTRUCTOR: 3, PING: 4, EMP: 5, SCRAMBLER: 6}
         INT_TO_PIECE = {1: FILTER, 2: ENCRYPTOR, 3: DESTRUCTOR, 4: PING, 5: EMP, 6: SCRAMBLER }
