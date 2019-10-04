@@ -21,6 +21,8 @@ class TerminalAI(nn.Module):
                                         nn.LeakyReLU(),
                                         nn.Linear(2700, 3300),
                                         nn.LeakyReLU(),
+                                        nn.Linear(3300, 3300),
+                                        nn.LeakyReLU(),
                                         nn.Linear(3300, 3780)
                                         )
 
