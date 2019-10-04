@@ -111,7 +111,7 @@ test_rewards = []
 N_GAMES = 100
 
 for game_idx in range(N_GAMES):
-    run_single_game("cd {} && java -jar engine.jar work {} {}".format(".", "algo_strategy_ppo.py", "algo_strategy_ppo.py"))
+    run_single_game("cd {} && java -jar engine.jar work {} {}".format(".", "./algo_strategy_ppo.py", "./algo_strategy_ppo.py"))
 
     list_of_action_replays = glob.glob("action_replay/*.pickle")
     latest_action = max(list_of_action_replays, key=os.path.getctime)
