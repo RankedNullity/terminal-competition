@@ -213,7 +213,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         linear_input = torch.cat((game_data, last_data), 0)
 
         conv_input = conv_input.permute(2, 1, 0).unsqueeze(0)
-        #conv_input = conv_input.float()
+        conv_input = conv_input.float()
 		
         network_output = self.model.forward(conv_input, linear_input)
         perform_action_using_output(network_output.numpy(), game_state)
