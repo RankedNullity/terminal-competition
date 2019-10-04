@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import gamelib
 import random
 import math
