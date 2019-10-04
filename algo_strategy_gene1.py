@@ -204,10 +204,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         else:
                 last_state = last_board[0]
                 last_data = last_board[1]
-        board_state = torch.from_numpy(board_state)
-        game_data = torch.from_numpy(game_data)
-        last_state = torch.from_numpy(last_state)
-        last_data = torch.from_numpy(last_data)
+        board_state = torch.FloatTensor(board_state)
+        game_data = torch.FloatTensor(game_data)
+        last_state = torch.FloatTensor(last_state)
+        last_data = torch.FloatTensor(last_data)
 
         conv_input = torch.cat((board_state, last_state), 0)
         linear_input = torch.cat((game_data, last_data), 0)
