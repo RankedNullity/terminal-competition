@@ -173,7 +173,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                         # sample from all 6 and choose unit type.
                         piece_type_probs = softmax(output[index: index + 6])
                         chosen_type = np.random.choice(np.arange(1,7), p=piece_type_probs)
-                        print("chosen type: ", chosen_type)
                         true_num = chosen_num if chosen_num > 3 else 1
                         game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y), true_num)
                         move_board[x, y, 0] = true_num
