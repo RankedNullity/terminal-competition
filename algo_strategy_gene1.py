@@ -122,7 +122,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """ 
         Read in config and perform any initial setup here 
         """
-        gamelib.debug_write('Configuring the PPO-agent strategy...')
+        gamelib.debug_write('Configuring the genetically bred agent...')
         self.config = config
         global FILTER, ENCRYPTOR, DESTRUCTOR, PING, EMP, SCRAMBLER, PIECE_TO_INT, INT_TO_PIECE
         FILTER = config["unitInformation"][0]["shorthand"]
@@ -194,11 +194,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         game engine.
         """
         game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of the PPO-agent strategy'.format(game_state.turn_number))
+        gamelib.debug_write('Performing turn {} of the Genetic-agent strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
         board_state, game_data = parse_gamestate(game_state)
         last_state, last_data = None, None
-        if last_board is None:
+        if self.last_board is None:
                 last_state = np.copy(board_state)
                 last_data = np.copy(game_data)
         else:
@@ -206,11 +206,14 @@ class AlgoStrategy(gamelib.AlgoCore):
                 last_data = last_board[1]
         board_state = torch.from_numpy(board_state)
         game_data = torch.from_numpy(game_data)
-        last_state = torch.from_numpy(board_state)
-        last_data = torch.from_numpy(board_state)
+        last_state = torch.from_numpy(last_state)
+        last_data = torch.from_numpy(last_data)
 
         conv_input = torch.cat((board_state, last_state), 0)
-        linear_input = torch.car((game_data, last_data), 0)
+        linear_input = torch.cat((game_data, last_data), 0)
+
+        conv_input = conv_input.permute(2, 1, 0).unsqueeze(0)
+        #conv_input = conv_input.float()
 		
         network_output = self.model.forward(conv_input, linear_input)
         perform_action_using_output(network_output.numpy(), game_state)
