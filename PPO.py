@@ -123,7 +123,7 @@ for game_idx in range(N_GAMES):
     masks     = []
     entropy = 0
 
-    run_single_game("cd {} && java -jar engine.jar work {} {}".format("..", "algo_strategy.py", "algo_strategy.py"))
+    run_single_game("cd {} && java -jar engine.jar work {} {}".format("..", "algo_strategy_ppo.py", "algo_strategy_ppo.py"))
 
     list_of_files = glob.glob("replays/*.replay") # * means all if need specific format then *.csv
     latest_file = max(list_of_files, key=os.path.getctime)
