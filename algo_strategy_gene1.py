@@ -133,9 +133,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         SCRAMBLER = config["unitInformation"][5]["shorthand"]
         # This is a good place to do initial setup
         self.scored_on_locations = []
-        self.model = TerminalAI()
+        self.model = TerminalAI()        
         # TODO: Specificy file_path
         # self.model.load_state_dict(torch.load('models/temp1'))
+        for param in self.model.parameters():
+            param.requires_grad = False
+        
         self.actions = []
         self.last_board = None
         PIECE_TO_INT = {FILTER: 1, ENCRYPTOR: 2, DESTRUCTOR: 3, PING: 4, EMP: 5, SCRAMBLER: 6}
@@ -144,11 +147,11 @@ class AlgoStrategy(gamelib.AlgoCore):
     def perform_action_using_output(self, output, game_state):
         '''Performs an action using the output of the PPO network, and submits using game_state'''
         # moveboard 28 x 14 half of the board [0: Num of units placed, 1: type of unit placed]
-        move_board = np.zeros(28, 14, 2)
+        move_board = np.zeros((28, 14, 2))
         
         # Assume output is 14x14x 18
-        row_cutoffs = [x for x in range(28,0,-2)]
-        cum_row_cutoff = [sum(row_cuttoffs[0:x]) for x in range(len(row_cutoffs))]
+        row_cutoffs = [x for x in range(28, -1 ,-2)]
+        cum_row_cutoff = [sum(row_cutoffs[0:x]) for x in range(len(row_cutoffs))]
         rowNum = 0
         for i in range(14 * 15):
             if i >= cum_row_cutoff[rowNum]:
@@ -159,26 +162,28 @@ class AlgoStrategy(gamelib.AlgoCore):
             for j in range(18):
                 index = i * 18 + j
                 num_placement_probs = softmax(output[index:index + 12])
-                chosen_num = choices(np.arange(-1, 11), num_placement_probs)
-
+                chosen_num = np.random.choice(np.arange(-1, 11), p=num_placement_probs)
+                
                 if chosen_num == -1:
-                    game_state.attempt_remove(x, y)
+                    game_state.attempt_remove((x, y))
                     move_board[x, y, 0] = -1
                 elif not chosen_num == 0:
                     index += 12
                     if game_state.can_spawn(PING, (x,y)):
                         # sample from all 6 and choose unit type.
                         piece_type_probs = softmax(output[index: index + 6])
-                        chosen_type = choices(np.arange(1,7), piece_type_probs)
+                        chosen_type = np.random.choice(np.arange(1,7), p=piece_type_probs)
+                        print("chosen type: ", chosen_type)
                         true_num = chosen_num if chosen_num > 3 else 1
-                        game_state.attempt_spawn(INT_TO_PIECE(chosen_type), (x,y), true_num)
+                        game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y), true_num)
                         move_board[x, y, 0] = true_num
                         move_board[x, y, 1] = chosen_type
                     else:
                         # sample from only the first 3                           
                         piece_type_probs = softmax(output[index: index + 3])
-                        chosen_type = choices(np.arange(1,4), piece_type_probs)
-                        game_state.attempt_spawn(INT_TO_PIECE(chosen_type), (x,y))
+                        chosen_type = np.random.choice(np.arange(1,4), p=piece_type_probs)
+                        game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y))
+                        true_num = chosen_num if chosen_num > 3 else 1
                         move_board[x, y, 0] = true_num
                         move_board[x, y, 1] = chosen_type
 
@@ -216,7 +221,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         conv_input = conv_input.float()
 		
         network_output = self.model.forward(conv_input, linear_input)
-        perform_action_using_output(network_output.numpy(), game_state)
+        self.perform_action_using_output(network_output.numpy(), game_state)
         game_state.submit_turn()
         
     def on_action_frame(self, turn_string):

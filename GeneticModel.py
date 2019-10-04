@@ -17,7 +17,7 @@ class TerminalAI(nn.Module):
                                           nn.LeakyReLU()
                                           # 9 x 2 x 128
                                           )
-                self.fc = nn.Sequential(nn.Linear(9 * 2 * 128, 2700),
+                self.fc = nn.Sequential(nn.Linear(9 * 2 * 128 + 14, 2700),
                                         nn.LeakyReLU(),
                                         nn.Linear(2700, 3300),
                                         nn.LeakyReLU(),
@@ -28,7 +28,7 @@ class TerminalAI(nn.Module):
                 '''Input size 56 x 28 x 2. Output size (14*15*18) x 1'''
                 output = self.conv(conv_input)
                 output = output.view(-1, 1)
-                output = torch.cat((output, linear_input), 0)
+                output = torch.cat((output.squeeze(), linear_input), 0)
                 return self.fc(output)
                 
 
