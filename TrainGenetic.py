@@ -104,12 +104,14 @@ def choose_n_gen_elites(n):
 for generation in range(generations):
     rewards = np.zeros(num_agents)
     games_played = np.zeros(num_agents)
+    file = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
     print(" Generation {} start".format(generation))
     for i in range(len(agents)):
         matchups = np.random.choice(len(agents), min_agent_games, replace=False)
         agent1 = agents[i]
         torch.save(agent1.state_dict(), 'models\\temp_model_1')
         for j in matchups:
+            file.write("playing mandatory game: agent {} vs agent {}".format(i, j))
             print("playing mandatory game: agent {} vs agent {}".format(i, j))
             agent2 = agents[j]
             torch.save(agent2.state_dict(), 'models\\temp_model_2')
@@ -137,11 +139,11 @@ for generation in range(generations):
     for best_parent in sorted_parent_indexes:
         top_rewards.append(reward_ratio[best_parent])
         new_pop.append(agents[best_parent])
-        torch.save(agents[best_parent], 'models\\elites\\generation_' + str(generation) + '_' + str(top_rewards[0]))
+        torch.save(agents[best_parent], 'models\\elites\\generation_' + str(generation) + '_' + str(best_parent))
     new_pop_array = new_pop.copy()
     
-    file = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
-    file.write("Generation {} | Mean rewards: {} | Mean of top 5: {}\n".format(generation, np.mean(reward_ratio), np.mean(top_rewards[:5])))
+    
+    file.write("Generation {} | Mean rewards: {} | Mean of top {}: {}\n".format(generation, np.mean(reward_ratio), top_limit, np.mean(top_rewards[:5])))
     file.write("Top {} scorers: {} \n".format(top_limit, sorted_parent_indexes))
     file.write("Rewards for top: {} \n".format(top_rewards))
     file.close()
