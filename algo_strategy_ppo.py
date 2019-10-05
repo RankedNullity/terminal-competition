@@ -68,6 +68,7 @@ def softmax(x):
 class AlgoStrategy(gamelib.AlgoCore):
     def __init__(self):
         super().__init__()
+        self.last_reward = 0.0
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
@@ -226,6 +227,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         game_state = self.perform_action_using_output(network_output.numpy(), game_state)
         with open('action_replay/actions.pickle', 'w') as f:
             pickle.dump(self.actions, f)
+
+        self.last_reward = 0.0
         game_state.submit_turn()
         
     def on_action_frame(self, turn_string):
@@ -241,6 +244,36 @@ class AlgoStrategy(gamelib.AlgoCore):
         if turnInfo[2] == 0:
             board, data = self.parse_serialized_string(turn_string)
             self.last_board = (board, data)
+
+        if turnInfo[0] != 1:
+            return
+
+        # process rewards
+        BREACH_REWARD = 2.0
+        BREACH_PUNISHMENT = -2.0
+        DMG_REWARD = 0.1
+        DMG_PUNISHMENT = -0.1
+        SHIELD_REWARD = 0.3
+        SHIELD_PUNISHMENT = -0.2
+        #filter , encryptor, destructor, ping, emp, scrambler
+        DEATH_REWARD = [0.2, 0.16, 0.25, 0.04, 0.25, 0.08]
+        DEATH_PUNISHMENT = [-0.3, -0.1, -0.2, -0.05, -0.4, -0.05]
+
+        events = state["events"]
+        for breach in events["breach"]:
+            # dmg = breach[1]
+            # 1 = we breached, gucci; 2 = enemy breached, we bacci
+            self.last_reward += BREACH_REWARD if breach[4] == 1 else BREACH_PUNISHMENT
+        for damage in events["damage"]:
+            dmg = damage[1] #4p
+            self.last_reward += dmg * (DMG_REWARD if damage[4] == 1 else DMG_PUNISHMENT)
+        for shield in events["shield"]:
+            buff = shield[2]
+            self.last_reward += SHIELD_REWARD if shield[4] == 1 else SHIELD_PUNISHMENT
+        for death in events["deaths"]:
+            if not death[4]:
+                unitType = death[1]
+                self.last_reward += DEATH_REWARD[death[1]] if death[3] == 2 else DEATH_PUNISHMENT[death[1]]
 
 
 if __name__ == "__main__":
