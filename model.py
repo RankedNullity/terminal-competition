@@ -30,7 +30,7 @@ class Actor(nn.Module):
         )
     def forward(self, Qboard, Qmeta):
         boardRep = self.boardBlock(Qboard)
-        return self.secondBlock(torch.cat(boardRep, Qmeta))
+        return self.secondBlock(torch.cat((boardRep, Qmeta)))
 
 
 class ActorCritic(nn.Module):

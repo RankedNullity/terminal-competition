@@ -88,13 +88,15 @@ class AlgoStrategy(gamelib.AlgoCore):
         SCRAMBLER = config["unitInformation"][5]["shorthand"]
         # This is a good place to do initial setup
         self.scored_on_locations = []
-        self.model = TerminalAI()        
+        self.model = ActorCritic()        
         # TODO: Specificy file_path
-        # self.model.load_state_dict(torch.load('models/temp1'))
-        for param in self.model.parameters():
-            param.requires_grad = False
+        self.model.load_state_dict(torch.load('run/weights'))
+        model.eval()
+        # for param in self.model.parameters():
+        #     param.requires_grad = False
         
         self.actions = []
+        self.rewards = []
         self.last_board = None
         PIECE_TO_INT = {FILTER: 1, ENCRYPTOR: 2, DESTRUCTOR: 3, PING: 4, EMP: 5, SCRAMBLER: 6}
         INT_TO_PIECE = {0: FILTER, 1: ENCRYPTOR, 2: DESTRUCTOR, 3: PING, 4: EMP, 5: SCRAMBLER }
@@ -197,6 +199,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         unit deployments, and transmitting your intended deployments to the
         game engine.
         """
+        self.rewards.append(self.last_reward)
+
         game_state = gamelib.GameState(self.config, turn_state)
         gamelib.debug_write('Performing turn {} of the Genetic-agent strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
@@ -222,7 +226,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         network_output = self.model.forward(conv_input, linear_input)
         game_state = self.perform_action_using_output(network_output, game_state)
         with open('action_replay/actions.pickle', 'w') as f:
-            pickle.dump(self.actions, f)
+            pickle.dump((self.actions, self.rewards), f)
 
         self.last_reward = 0.0
         game_state.submit_turn()
