@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 import json
+import copy
 
 from GeneticModel import *
 
@@ -22,8 +23,15 @@ def return_random_agents(num_agents):
         agents.append(agent)
     return agents
 
-def run_single_game():
-    process_command = "java -jar engine.jar work .\\run_gene1.ps1 .\\run_gene2.ps1"
+def run_single_game(flip=False):
+    if flip:
+        agent2 = ".\\run_gene1.ps1"
+        agent1 = ".\\run_gene2.ps1"
+
+    else:
+        agent1 = ".\\run_gene1.ps1"
+        agent2 = ".\\run_gene2.ps1"
+    process_command = "java -jar engine.jar work {} {}".format(agent1, agent2)
     print("Start running a match")
     p = subprocess.Popen(
         process_command,
@@ -46,13 +54,13 @@ num_agents = 50
 agents = return_random_agents(num_agents)
 
 # How many top agents to consider as parents
-top_limit = num_agents / 50
+top_limit = num_agents / 50 if num_agents > 50 else 1
 
 # run evolution until X generations
 generations = 100
 
 
-min_agent_games = 5
+min_agent_games = 2
 additional_games = 0
 total_games = num_agents * min_agent_games + additional_games
 
@@ -60,7 +68,7 @@ total_games = num_agents * min_agent_games + additional_games
 replayDir = os.getcwd() + '\\replays'
 eliteDir = os.getcwd() + '\\models\\elites'
 f = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
-f.write("Starting Genetic Evolution")
+f.write("Starting Genetic Evolution. Population size: {} Generations: {}\n".format(num_agents, generations))
 f.close()
 def update_stats(i, j):
     games_played[i] += 1
@@ -100,8 +108,11 @@ for generation in range(generations):
             print("playing mandatory game: agent {} vs agent {}".format(i, j))
             agent2 = agents[j]
             torch.save(agent2.state_dict(), 'models\\temp_model_2')
-            run_single_game()
+            run_single_game(False)
             update_stats(i, j)
+            print("Switching Sides")
+            run_single_game(True)
+            update_stats(j, i)
                     
     for game in range(total_games - min_agent_games * num_agents):
         match_pairing = np.random.choice(len(agents), 2, replace=False) 
@@ -111,8 +122,11 @@ for generation in range(generations):
         agent2 = agents[match_pairing[1]]
         torch.save(agent1.state_dict(), 'models\\temp_model_1')
         torch.save(agent2.state_dict(), 'models\\temp_model_2')
-        run_single_game()
+        run_single_game(False)
         update_stats(i, j)
+        print("Switching Sides")
+        run_single_game(True)
+        update_stats(j, i)
             
     # sort by rewards
     reward_ratio = rewards / games_played
@@ -124,32 +138,36 @@ for generation in range(generations):
     for best_parent in sorted_parent_indexes:
         top_rewards.append(reward_ratio[best_parent])
         new_pop.append(agents[best_parent])
-        torch.save(agents[best_parent], 'models\\elites\\generation_' + generation + '_' + top_rewards[0])
+        torch.save(agents[best_parent], 'models\\elites\\generation_' + str(generation) + '_' + str(top_rewards[0]))
     new_pop_array = new_pop.copy()
     
-    f = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
-    f.write("Generation ", generation, " | Mean rewards: ", np.mean(reward_ratio), " | Mean of top 5: ",np.mean(top_rewards[:5]))
-    f.write("Top ",top_limit," scorers", sorted_parent_indexes)
-    f.write("Rewards for top: ", top_rewards)
-    f.close()
+    file = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
+    file.write("Generation {} | Mean rewards: {} | Mean of top 5: {}\n".format(generation, np.mean(reward_ratio), np.mean(top_rewards[:5])))
+    file.write("Top {} scorers: {} \n".format(top_limit, sorted_parent_indexes))
+    file.write("Rewards for top: {} \n".format(top_rewards))
+    file.close()
     
     # Save the top performing agent
     #torch.save(agents[sorted_parent_indexes[0]], 'models\\elites\\generation_' + generation + '_' + top_rewards[0])
 
+    print("Creating new population")
     # fill the new generation with children
     children = []
-    for i in range(num_agents * 8 / 10):
+    print("Generating descendants")
+    for i in range(int(round(num_agents * 8 / 10))):
         children.append(mutate(new_pop_array[i % top_limit]))
     new_pop = new_pop + children
-    new_pop = new_pop + return_random_agents(num_agents / 10)
-
+    print("Adding Random Agents")
+    new_pop = new_pop + return_random_agents(int(round(num_agents / 10)))
+    
     elites = os.listdir(eliteDir)
-    num_old_elites = num_agents * 2 / 25
+    
+    num_old_elites = num_agents - len(new_pop)
+    print("Adding Generational Elites")
     if len(elites) < num_old_elites:
         for i in range(num_old_elites):
             new_pop.append(mutate(new_pop_array[i % top_limit], 0.05))
     else:
         new_pop = new_pop + choose_n_gen_elites(num_old_elites)
-
     # kill all agents, and replace them with their children
     agents = new_pop

@@ -3,28 +3,38 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+import copy
 
 class TerminalAI(nn.Module):
         def __init__(self):
-                super().__init__()
-                self.conv = nn.Sequential(nn.Conv2d(4, 32, (8, 8), stride=4),
-                                          nn.LeakyReLU(),
-                                          # 13 x 6 x 32
-                                          nn.Conv2d(32, 64, (4, 4), stride=1),
-                                          nn.LeakyReLU(),
-                                          # 10 x 3 x 64
-                                          nn.Conv2d(64, 128, (2, 2), stride=1),
-                                          nn.LeakyReLU()
-                                          # 9 x 2 x 128
-                                          )
-                self.fc = nn.Sequential(nn.Linear(9 * 2 * 128 + 14, 2700),
-                                        nn.LeakyReLU(),
-                                        nn.Linear(2700, 3300),
-                                        nn.LeakyReLU(),
-                                        nn.Linear(3300, 3300),
-                                        nn.LeakyReLU(),
-                                        nn.Linear(3300, 3780)
-                                        )
+            super().__init__()
+            self.conv = nn.Sequential(nn.Conv2d(4, 32, (8, 8), stride=4),
+                                      nn.LeakyReLU(),
+                                      # 13 x 6 x 32
+                                      nn.Conv2d(32, 64, (4, 4), stride=1),
+                                      nn.LeakyReLU(),
+                                      # 10 x 3 x 64
+                                      nn.Conv2d(64, 128, (2, 2), stride=1),
+                                      nn.LeakyReLU()
+                                      # 9 x 2 x 128
+                                      )
+            self.fc = nn.Sequential(nn.Linear(9 * 2 * 128 + 14, 2700),
+                                    nn.LeakyReLU(),
+                                    nn.Linear(2700, 3300),
+                                    nn.LeakyReLU(),
+                                    nn.Linear(3300, 3300),
+                                    nn.LeakyReLU(),
+                                    nn.Linear(3300, 3780)
+                                    )
+                                    
+            self.add_tensors = {}
+            for name, tensor in self.named_parameters():
+                if tensor.size() not in self.add_tensors:
+                    self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
+                if 'weight' in name:
+                    nn.init.kaiming_normal(tensor)
+                else:
+                    tensor.data.zero_()
 
         def forward(self, conv_input, linear_input):
                 '''Input size 56 x 28 x 2. Output size (14*15*18) x 1'''
@@ -48,32 +58,10 @@ def init_weights(m):
 
 def mutate(agent, mutation_power=0.02):
     child_agent = copy.deepcopy(agent)
-    
-    # mutation_power = 0.002 hyper-parameter, set from https://arxiv.org/pdf/1712.06567.pdf
-            
-    for param in child_agent.parameters():
-    
-        if(len(param.shape)==4): #weights of Conv2D
-
-            for i0 in range(param.shape[0]):
-                for i1 in range(param.shape[1]):
-                    for i2 in range(param.shape[2]):
-                        for i3 in range(param.shape[3]):
-                            
-                            param[i0][i1][i2][i3]+= mutation_power * np.random.randn()
-                                
-                                    
-
-        elif(len(param.shape)==2): #weights of linear layer
-            for i0 in range(param.shape[0]):
-                for i1 in range(param.shape[1]):
-                    
-                    param[i0][i1]+= mutation_power * np.random.randn()
-                        
-
-        elif(len(param.shape)==1): #biases of linear layer or conv layer
-            for i0 in range(param.shape[0]):
-                
-                param[i0]+=mutation_power * np.random.randn()
+    # mutation_power = 0.002 hyper-parameter, set from https://arxiv.org/pdf/1712.06567.pdf        
+    for name, tensor in child_agent.named_parameters():
+        to_add = child_agent.add_tensors[tensor.size()]
+        to_add.normal_(0.0, mutation_power)
+        tensor.data.add_(to_add)
 
     return child_agent
