@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
-n_board = 2 * 28 * 28 * 4
+n_board = 28 * 28 * 7 
 n_meta = 4
 num_outputs = 714 # todo envs.action_space.shape[0]
 hidden_size = 100
