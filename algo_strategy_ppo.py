@@ -99,6 +99,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         
         self.actions = []
         self.rewards = []
+        self.states = []
         self.last_board = None
         PIECE_TO_INT = {FILTER: 1, ENCRYPTOR: 2, DESTRUCTOR: 3, PING: 4, EMP: 5, SCRAMBLER: 6}
         INT_TO_PIECE = {0: FILTER, 1: ENCRYPTOR, 2: DESTRUCTOR, 3: PING, 4: EMP, 5: SCRAMBLER }
@@ -154,8 +155,9 @@ class AlgoStrategy(gamelib.AlgoCore):
     def perform_action_using_output(self, output, game_state):
         '''Performs an action using the output of the PPO network, and submits using game_state'''
         # moveboard 28 x 14 half of the board [0: Num of units placed, 1: type of unit placed]
-        output = output.sample().numpy()
-        move_board = np.zeros((28, 14, 2))
+        raw_action = output.sample()
+        output = raw_action.numpy()
+        # move_board = np.zeros((28, 14, 2))
 
         # Assume output is 14x14x 18
         row_cutoffs = [x for x in range(28, -1 ,-2)]
@@ -182,11 +184,10 @@ class AlgoStrategy(gamelib.AlgoCore):
             if chosen_type != -69:
                 true_num = int(round(chosen_num)) if chosen_type > 2 else 1 # if defensive, do 1 at most
                 game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
-                move_board[x, y, 0] = true_num
-                move_board[x, y, 1] = chosen_type
+                # move_board[x, y, 0] = true_num
+                # move_board[x, y, 1] = chosen_type
             index += 3
-        self.actions.append(move_board)
-        #gamelib.debug_write(move_board)
+        self.actions.append(raw_action)
         return game_state
 
 
@@ -223,10 +224,12 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         conv_input = conv_input.flatten()
 		
-        action_dist, value = self.model(conv_input, linear_input)
+        Q = torch.cat((conv_input, linear_input))
+        self.states.append(Q)
+        action_dist, value = self.model(Q)
         game_state = self.perform_action_using_output(action_dist, game_state)
         with open('action_replay/actions.pickle', 'wb') as f:
-            pickle.dump((self.actions, self.rewards), f)
+            pickle.dump((self.actions, self.rewards, self.states), f)
 
         self.last_reward = 0.0
         game_state.submit_turn()

@@ -16,21 +16,18 @@ class Actor(nn.Module):
     def __init__(self):
         super(Actor, self).__init__()
 
-        self.boardBlock = nn.Sequential(
-            nn.Linear(n_board, 12000),
+        self.seq = nn.Sequential(
+            nn.Linear(n_board + n_meta, 12000),
             nn.ReLU(),
             nn.Linear(12000, 18000),
-            nn.ReLU()
-        )
-        self.secondBlock = nn.Sequential(
-            nn.Linear(18000 + n_meta, 12000),
+            nn.ReLU(),
+            nn.Linear(18000, 12000),
             nn.ReLU(),
             nn.Linear(12000, (28 + 210) * 3),
             nn.Sigmoid()
         )
-    def forward(self, Qboard, Qmeta):
-        boardRep = self.boardBlock(Qboard)
-        return self.secondBlock(torch.cat((boardRep, Qmeta)))
+    def forward(self, state):
+        return self.seq(state)
 
 
 class ActorCritic(nn.Module):
@@ -48,10 +45,9 @@ class ActorCritic(nn.Module):
         
         self.apply(init_weights)
         
-    def forward(self, Qboard, Qmeta):
-        import gamelib
-        value = self.critic(torch.cat((Qboard, Qmeta)))
-        mu    = self.actor(Qboard, Qmeta)
+    def forward(self, state):
+        value = self.critic(state)
+        mu    = self.actor(state)
         std   = self.log_std.exp().expand_as(mu)
         dist  = Normal(mu, std)
         return dist, value
