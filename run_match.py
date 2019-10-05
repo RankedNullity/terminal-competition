@@ -36,7 +36,7 @@ if len(sys.argv) > 1:
 if len(sys.argv) > 2:
     algo2 = sys.argv[2]
 
-print("Algo 1: ", algo1)
-print("Algo 2:", algo2)
+algo1 = ".\\run_gene1.ps1"
+algo2 = ".\\run_gene2.ps1"
 
 run_single_game("cd {} && java -jar engine.jar work {} {}".format(file_dir, algo1, algo2))

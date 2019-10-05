@@ -156,9 +156,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         for i in range(14 * 15):
             if i >= cum_row_cutoff[rowNum]:
                 rowNum += 1
-            rowPos = i - cum_row_cutoff[rowNum]
-            x = rowNum + rowPos
-            y = 13 - rowNum
+            rowPos = i - cum_row_cutoff[rowNum - 1]
+            x = rowNum + rowPos - 1
+            y = 14 - rowNum
+            #gamelib.debug_write("{}, {}".format(x,y))
+                
             index = i * 18
             num_placement_probs = softmax(output[index:index + 12])
             chosen_num = np.random.choice(np.arange(-1, 11), p=num_placement_probs)
@@ -178,12 +180,14 @@ class AlgoStrategy(gamelib.AlgoCore):
                 else:
                     # sample from only the first 3                           
                     piece_type_probs = softmax(output[index:index + 3])
-                    chosen_type = np.random.choice(np.arange(1,4), p=piece_type_probs)
+                    chosen_type = np.random.choice(np.arange(1,4), p=piece_type_probs)                    
                     game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y))
                     true_num = chosen_num if chosen_num > 3 else 1
                     move_board[x, y, 0] = true_num
                     move_board[x, y, 1] = chosen_type
         self.actions.append(move_board)
+        #gamelib.debug_write(move_board)
+        return game_state
 
 
     def on_turn(self, turn_state):
@@ -217,7 +221,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         conv_input = conv_input.float()
 		
         network_output = self.model.forward(conv_input, linear_input)
-        self.perform_action_using_output(network_output.numpy(), game_state)
+        game_state = self.perform_action_using_output(network_output.numpy(), game_state)
         game_state.submit_turn()
         
     def on_action_frame(self, turn_string):

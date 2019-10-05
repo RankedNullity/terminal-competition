@@ -54,22 +54,23 @@ num_agents = 50
 agents = return_random_agents(num_agents)
 
 # How many top agents to consider as parents
-top_limit = num_agents / 50 if num_agents > 50 else 1
+top_limit = 3
 
 # run evolution until X generations
-generations = 100
+generations = 10
 
 
-min_agent_games = 2
+min_agent_games = 5
 additional_games = 0
 total_games = num_agents * min_agent_games + additional_games
 
 
 replayDir = os.getcwd() + '\\replays'
 eliteDir = os.getcwd() + '\\models\\elites'
-f = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
+f = open(os.getcwd() + "\\models\\training_log.txt", 'w+')
 f.write("Starting Genetic Evolution. Population size: {} Generations: {}\n".format(num_agents, generations))
 f.close()
+
 def update_stats(i, j):
     games_played[i] += 1
     games_played[j] += 1
@@ -77,12 +78,17 @@ def update_stats(i, j):
     current_replay_file = replays[0]
     with open(replayDir + '\\' + current_replay_file, 'r') as file:
         data = file.read()
+        turns_indicator = '"turns":'
+        start_index = data.find(turns_indicator) + len(turns_indicator)
+        rest_string = data[start_index:]
+        end_index = rest_string.find('}')
+        turns_end = int(data[start_index:start_index + end_index])
         if (data.find('"winner":1') != -1):
-            rewards[i] += 1
-            rewards[j] -= 1
+            rewards[i] += 1 / turns_end
+            rewards[j] -= 1 / turns_end
         elif (data.find('"winner":2') != -1):
-            rewards[i] -= 1
-            rewards[j] += 1
+            rewards[i] -= 1 / turns_end
+            rewards[j] += 1 / turns_end
     os.remove(replayDir + '\\' + current_replay_file)
     
 def choose_n_gen_elites(n):
@@ -100,7 +106,6 @@ for generation in range(generations):
     games_played = np.zeros(num_agents)
     print(" Generation {} start".format(generation))
     for i in range(len(agents)):
-    
         matchups = np.random.choice(len(agents), min_agent_games, replace=False)
         agent1 = agents[i]
         torch.save(agent1.state_dict(), 'models\\temp_model_1')
@@ -110,9 +115,6 @@ for generation in range(generations):
             torch.save(agent2.state_dict(), 'models\\temp_model_2')
             run_single_game(False)
             update_stats(i, j)
-            print("Switching Sides")
-            run_single_game(True)
-            update_stats(j, i)
                     
     for game in range(total_games - min_agent_games * num_agents):
         match_pairing = np.random.choice(len(agents), 2, replace=False) 
@@ -124,12 +126,9 @@ for generation in range(generations):
         torch.save(agent2.state_dict(), 'models\\temp_model_2')
         run_single_game(False)
         update_stats(i, j)
-        print("Switching Sides")
-        run_single_game(True)
-        update_stats(j, i)
             
     # sort by rewards
-    reward_ratio = rewards / games_played
+    reward_ratio = rewards
     sorted_parent_indexes = np.argsort(reward_ratio)[::-1][:top_limit] #reverses and gives top values (argsort sorts by ascending by default) https://stackoverflow.com/questions/16486252/is-it-possible-to-use-argsort-in-descending-order
     
     top_rewards = []
