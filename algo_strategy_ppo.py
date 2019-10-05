@@ -107,14 +107,15 @@ class AlgoStrategy(gamelib.AlgoCore):
                 x, y = map(int, [sx, sy])
                 hp = float(shp)
                 if board[x, y, 0] == 0:
-                    board[x, y, 0] = i + 1
-                    board[x, y, 1] = hp
-                    board[x, y, 2] = player_number + 1
-                board[x, y, 3] += 1
+					board[x, y, 1] += hp
+					board[x, y, 2] = player_number
+					board[x, y, 3] = i // 3
+					board[x, y, 4 + (i % 3)] = 1
+				board[x, y, 0] += 1
                 
                 # This depends on RM always being the last type to be processed
                 if unit_type == typedef[6]["shorthand"]:
-                     board[x, y, 3] = -1
+                     board[x, y, 1] = -1
         return board
         
     def parse_serialized_string(self, serialized_string):
@@ -126,7 +127,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Channel 1: Piece HP
         # Channel 2: Piece Side [0 = empty, 1 = Friendly, 2 = Enemy]
         # Channel 3: Amount of Pieces (-1 = marked for removal)
-        board = np.zeros((28, 28, 4))
+        board = np.zeros((28, 28, 7))
         p1units = state["p1Units"]
         p2units = state["p2Units"]
         board = self.update_board(board, p1units, 0)
@@ -157,34 +158,38 @@ class AlgoStrategy(gamelib.AlgoCore):
         for i in range(14 * 15):
             if i >= cum_row_cutoff[rowNum]:
                 rowNum += 1
-            rowPos = i - cum_row_cutoff[rowNum]
-            x = rowNum + rowPos
-            y = 13 - rowNum
+            rowPos = i - cum_row_cutoff[rowNum - 1]
+            x = rowNum + rowPos - 1
+            y = 14 - rowNum
+            #gamelib.debug_write("{}, {}".format[x, y])
+                
             index = i * 18
             num_placement_probs = softmax(output[index:index + 12])
             chosen_num = np.random.choice(np.arange(-1, 11), p=num_placement_probs)
             if chosen_num == -1:
-                game_state.attempt_remove((x, y))
+                game_state.attempt_remove([x, y])
                 move_board[x, y, 0] = -1
             elif chosen_num != 0:
                 index += 12
-                if game_state.can_spawn(PING, (x,y)):
+                if game_state.can_spawn(PING, [x, y]):
                     # sample from all 6 and choose unit type.
                     piece_type_probs = softmax(output[index:index + 6])
                     chosen_type = np.random.choice(np.arange(1,7), p=piece_type_probs)
                     true_num = chosen_num if chosen_num > 3 else 1
-                    game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y), true_num)
+                    game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
                     move_board[x, y, 0] = true_num
                     move_board[x, y, 1] = chosen_type
                 else:
                     # sample from only the first 3                           
                     piece_type_probs = softmax(output[index:index + 3])
-                    chosen_type = np.random.choice(np.arange(1,4), p=piece_type_probs)
-                    game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y))
+                    chosen_type = np.random.choice(np.arange(1,4), p=piece_type_probs)                    
+                    game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y])
                     true_num = chosen_num if chosen_num > 3 else 1
                     move_board[x, y, 0] = true_num
                     move_board[x, y, 1] = chosen_type
         self.actions.append(move_board)
+        #gamelib.debug_write(move_board)
+        return game_state
 
 
     def on_turn(self, turn_state):
@@ -218,7 +223,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         conv_input = conv_input.float()
 		
         network_output = self.model.forward(conv_input, linear_input)
-        self.perform_action_using_output(network_output.numpy(), game_state)
+        game_state = self.perform_action_using_output(network_output.numpy(), game_state)
         with open('action_replay/actions.pickle', 'w') as f:
             pickle.dump(self.actions, f)
         game_state.submit_turn()
