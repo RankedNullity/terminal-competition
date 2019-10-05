@@ -30,7 +30,7 @@ class Actor(nn.Module):
         )
     def forward(self, Qboard, Qmeta):
         boardRep = self.boardBlock(Qboard)
-        return self.secondBlock(torch.cat(boardRep, Qmeta))
+        return self.secondBlock(torch.cat((boardRep, Qmeta)))
 
 
 class ActorCritic(nn.Module):
@@ -49,7 +49,7 @@ class ActorCritic(nn.Module):
         self.apply(init_weights)
         
     def forward(self, Qboard, Qmeta):
-        value = self.critic(torch.cat(Qboard, Qmeta))
+        value = self.critic(torch.cat((Qboard, Qmeta)))
         mu    = self.actor(Qboard, Qmeta)
         std   = self.log_std.exp().expand_as(mu)
         dist  = Normal(mu, std)

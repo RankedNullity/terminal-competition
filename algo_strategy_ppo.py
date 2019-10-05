@@ -76,7 +76,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """ 
         Read in config and perform any initial setup here 
         """
-        gamelib.debug_write('Configuring the genetically bred agent...')
+        gamelib.debug_write('Configuring the PPO- agent...')
         self.config = config
         global FILTER, ENCRYPTOR, DESTRUCTOR, PING, EMP, SCRAMBLER, PIECE_TO_INT, INT_TO_PIECE
         FILTER = config["unitInformation"][0]["shorthand"]
@@ -87,11 +87,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         SCRAMBLER = config["unitInformation"][5]["shorthand"]
         # This is a good place to do initial setup
         self.scored_on_locations = []
-        self.model = TerminalAI()        
+        self.model = ActorCritic()        
         # TODO: Specificy file_path
         # self.model.load_state_dict(torch.load('models/temp1'))
-        for param in self.model.parameters():
-            param.requires_grad = False
         
         self.actions = []
         self.last_board = None
@@ -197,7 +195,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         game engine.
         """
         game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of the Genetic-agent strategy'.format(game_state.turn_number))
+        gamelib.debug_write('Performing turn {} of the PPO-agent strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
         board_state, game_data = self.parse_serialized_string(turn_state)
         last_state, last_data = None, None
@@ -216,7 +214,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         conv_input = torch.cat((board_state, last_state), 0)
         linear_input = torch.cat((game_data, last_data), 0)
 
-        conv_input = conv_input.view(-1, 1)
+        conv_input = conv_input.flatten()
 		
         network_output = self.model.forward(conv_input, linear_input)
         game_state = self.perform_action_using_output(network_output, game_state)

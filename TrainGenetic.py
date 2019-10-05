@@ -50,11 +50,11 @@ use_cuda = torch.cuda.is_available()
 device   = torch.device("cuda" if use_cuda else "cpu")
 
 # initialize N number of agents
-num_agents = 50
+num_agents = 10
 agents = return_random_agents(num_agents)
 
 # How many top agents to consider as parents
-top_limit = 3
+top_limit = 1
 
 # run evolution until X generations
 generations = 10
