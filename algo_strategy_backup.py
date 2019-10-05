@@ -43,7 +43,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         # This is a good place to do initial setup
         self.scored_on_locations = []
 
-
+    def build_shield_line(self, game_state):
+        
+        
     def setup_unbreakable(self, game_state):
         x1_filter = [2, 7, 13, 20, 25, 0, 27]
         x1_destructor = [0, 1, 2, 7, 13, 20, 25, 26]
@@ -54,8 +56,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         x3_filter = [8, 19, 14, 12, 3, 24, 6, 21]
         x3_destructor = [6, 8, 12, 14, 19, 21]
 
-        x4_filter = [17]
+        x4_filter = [17, 10]
         x4_destructor = x4_filter
+
+        x5_destructor = [3, 6, 8, 12, 14, 19, 21, 17, 10]
         for x in x1_filter:
             game_state.attempt_spawn(FILTER, [x, 13])
         for x in x1_destructor:
@@ -76,14 +80,24 @@ class AlgoStrategy(gamelib.AlgoCore):
         for x in x4_destructor:
             game_state.attempt_spawn(DESTRUCTOR, [x, 12])
 
-       # if game_state.get_resource(game_state.bits, 1) >= 10:
-       #      for x in x3:
-       #          game_state.attempt_spawn(FILTER, [x, 13])
-       #      for x in x3:
-       #          game_state.attempt_spawn(DESTRUCTOR, [x, 12])
+        opp_bits = game_state.get_resource(game_state.bits, 1)
+        if opp_bits < 15:
+            self.build_shield_line(game_state)
+            return
+        
+        if opp_bits >= 15:
+            for x in x5:
+                game_state.attempt_spawn(DESTRUCTOR, [x, 10])
+        if opp_bits >= 20:
+            for x in x5:
+                game_state.attempt_spawn(DESTRUCTOR, [x, 9])
+        if opp_bits >= 25:
+            for x in x5:
+                game_state.attempt_spawn(DESTRUCTOR, [x, 8])
 
     def setup_attackers(self, game_state):
-        pass
+        while game_state.can_spawn(PING, [11, 2]):
+            game_state.attempt_spawn(PINT, [11, 2])
     
     def backup_strategy(self, game_state):
         self.setup_unbreakable(game_state)
