@@ -107,11 +107,14 @@ class AlgoStrategy(gamelib.AlgoCore):
         if not shields_built and opp_bits >= 12:
             game_state.attempt_spawn(SCRAMBLER, [6, 7])
             game_state.attempt_spawn(SCRAMBLER, [21, 7])
-        elif not shields_built and opp_bits >= 20:
-            while game_state.can_spawn(SCRAMBLER, [3, 10]) or game_state.can_spawn(SCRAMBLER, [24, 10]):
-                game_state.attempt_spawn(SCRAMBLER, [3, 10])
-                game_state.attempt_spawn(SCRAMBLER, [24, 10])
-        elif shields_built or our_bits >= 20:
+#        elif not shields_built and opp_bits >= 20:
+#            while game_state.can_spawn(SCRAMBLER, [3, 10]) or game_state.can_spawn(SCRAMBLER, [24, 10]):
+#                game_state.attempt_spawn(SCRAMBLER, [3, 10])
+#                game_state.attempt_spawn(SCRAMBLER, [24, 10])
+        elif our_bits >= 20:
+            while game_state.can_spawn(PING, [11, 2]):
+                game_state.attempt_spawn(PING, [11, 2])
+        else:
             while game_state.can_spawn(PING, [11, 2]):
                 game_state.attempt_spawn(PING, [11, 2])
     
