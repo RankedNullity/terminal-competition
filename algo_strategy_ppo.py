@@ -62,6 +62,7 @@ def parse_gamestate(game_state):
 		
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
+    gamelib.debug_write(x)
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
@@ -91,8 +92,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.model = ActorCritic()        
         # TODO: Specificy file_path
         # self.model.load_state_dict(torch.load('models/temp1'))
-        self.model.load_state_dict(torch.load('run/weights'))
-        model.eval()
+        # self.model.load_state_dict(torch.load('run/weights'))
+        self.model.eval()
         # for param in self.model.parameters():
         #     param.requires_grad = False
         
@@ -153,13 +154,13 @@ class AlgoStrategy(gamelib.AlgoCore):
     def perform_action_using_output(self, output, game_state):
         '''Performs an action using the output of the PPO network, and submits using game_state'''
         # moveboard 28 x 14 half of the board [0: Num of units placed, 1: type of unit placed]
-        output = output.sample()
+        output = output.sample().numpy()
         move_board = np.zeros((28, 14, 2))
 
         # Assume output is 14x14x 18
         row_cutoffs = [x for x in range(28, -1 ,-2)]
         cum_row_cutoff = [sum(row_cutoffs[0:x]) for x in range(len(row_cutoffs))]
-        rowNum = 0
+        index = rowNum = 0
         for i in range(14 * 15):
             if i >= cum_row_cutoff[rowNum]:
                 rowNum += 1
@@ -169,21 +170,24 @@ class AlgoStrategy(gamelib.AlgoCore):
             #gamelib.debug_write("{}, {}".format[x, y])
             if game_state.can_spawn(PING, [x, y]):
                 # sample from all 6 and choose unit type.
-                piece_type_probs = softmax(output[index:index + 6])
-                chosen_type = np.random.choice(np.arange(6), p=num_placement_probs)
-                chosen_num = output[index + chosen_type]
-                true_num = chosen_num if chosen_num > 2 else 1
+                samples = output[index:index + 6]
+                for i, sample in enumerate(samples):
+                    if sample >= 0.5:
+                        chosen_num = sample
+                        chosen_type = i
+                true_num = int(round(chosen_num)) if chosen_type > 2 else 1 # if defensive, do 1 at most
                 game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
                 move_board[x, y, 0] = true_num
                 move_board[x, y, 1] = chosen_type
                 index += 3
             else:
-                # sample from only the first
-                piece_type_probs = softmax(output[index:index + 3])
-                np.random.choice(np.arange(3), p=num_placement_probs)
-                output[index + chosen_type]
-                chosen_num if chosen_num > 2 else 1
-                attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
+                samples = output[index:index + 3]
+                for i, sample in enumerate(samples):
+                    if sample >= 0.5:
+                        chosen_num = sample
+                        chosen_type = i
+                true_num = int(round(chosen_num)) if chosen_type > 2 else 1 # if defensive, do 1 at most
+                game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
                 move_board[x, y, 0] = true_num
                 move_board[x, y, 1] = chosen_type
             index += 3
@@ -221,12 +225,13 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         conv_input = torch.cat((board_state, last_state), 0)
         linear_input = torch.cat((game_data, last_data), 0)
+        # gamelib.debug_write("game_data: {}, last_data: {}, res: {}".format(game_data.size(), last_data.size(), linear_input.size()))
 
         conv_input = conv_input.flatten()
 		
-        network_output = self.model.forward(conv_input, linear_input)
-        game_state = self.perform_action_using_output(network_output, game_state)
-        with open('action_replay/actions.pickle', 'w') as f:
+        action_dist, value = self.model(conv_input, linear_input)
+        game_state = self.perform_action_using_output(action_dist, game_state)
+        with open('action_replay/actions.pickle', 'wb') as f:
             pickle.dump((self.actions, self.rewards), f)
 
         self.last_reward = 0.0

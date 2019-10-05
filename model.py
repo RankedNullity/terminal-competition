@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
-n_board = 28 * 28 * 7 
-n_meta = 4
+n_board = 2 * 28 * 28 * 7 
+n_meta = 14
 num_outputs = 714 # todo envs.action_space.shape[0]
 hidden_size = 100
 
@@ -44,11 +44,12 @@ class ActorCritic(nn.Module):
         )
         
         self.actor = Actor()
-        self.log_std = nn.Parameter(torch.ones(1, num_outputs) * std)
+        self.log_std = nn.Parameter(torch.ones(num_outputs) * std)
         
         self.apply(init_weights)
         
     def forward(self, Qboard, Qmeta):
+        import gamelib
         value = self.critic(torch.cat((Qboard, Qmeta)))
         mu    = self.actor(Qboard, Qmeta)
         std   = self.log_std.exp().expand_as(mu)
