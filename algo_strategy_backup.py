@@ -26,6 +26,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
+        self.shields = [[x, 7] for x in range(10, 20)]
+        self.shields += [[12, y] for y in range(1, 6)]
+        self.shields = [[13, y] for y in range(2, 5)]
+        self.shields += [[x, 4] for x in range(14, 19)]
+        self.shields += [[9, y] for y in range(4, 7)]
+        self.shields += [[x, 8] for x in range(11, 20)]
 
     def on_game_start(self, config):
         """ 
@@ -44,7 +50,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.scored_on_locations = []
 
     def build_shield_line(self, game_state):
-        
+        for p in self.shields:
+            game_state.attempt_spawn(ENCRYPTOR, p)
         
     def setup_unbreakable(self, game_state):
         x1_filter = [2, 7, 13, 20, 25, 0, 27]
@@ -81,23 +88,24 @@ class AlgoStrategy(gamelib.AlgoCore):
             game_state.attempt_spawn(DESTRUCTOR, [x, 12])
 
         opp_bits = game_state.get_resource(game_state.bits, 1)
-        if opp_bits < 15:
-            self.build_shield_line(game_state)
-            return
         
         if opp_bits >= 15:
             for x in x5:
                 game_state.attempt_spawn(DESTRUCTOR, [x, 10])
-        if opp_bits >= 20:
-            for x in x5:
-                game_state.attempt_spawn(DESTRUCTOR, [x, 9])
-        if opp_bits >= 25:
-            for x in x5:
-                game_state.attempt_spawn(DESTRUCTOR, [x, 8])
+        else:
+            self.build_shield_line(game_state)
 
     def setup_attackers(self, game_state):
-        while game_state.can_spawn(PING, [11, 2]):
-            game_state.attempt_spawn(PINT, [11, 2])
+        shields_built = True
+        for p in self.shields[:15]:
+            if not game_state.game_map[p[0], p[1]]:
+                shield_built = False
+        if not shield_built:
+            game_state.attempt_spawn(SCRAMBLER, [6, 7])
+            game_state.attempt_spawn(SCRAMBLER, [21, 7])
+        else:
+            while game_state.can_spawn(PING, [11, 2]):
+                game_state.attempt_spawn(PING, [11, 2])
     
     def backup_strategy(self, game_state):
         self.setup_unbreakable(game_state)
