@@ -173,21 +173,13 @@ class AlgoStrategy(gamelib.AlgoCore):
             if game_state.can_spawn(PING, [x, y]):
                 # sample from all 6 and choose unit type.
                 samples = output[index:index + 6]
-                for i, sample in enumerate(samples):
-                    if sample >= 0.5:
-                        chosen_num = sample
-                        chosen_type = i
-                true_num = int(round(chosen_num)) if chosen_type > 2 else 1 # if defensive, do 1 at most
-                game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
-                move_board[x, y, 0] = true_num
-                move_board[x, y, 1] = chosen_type
-                index += 3
             else:
                 samples = output[index:index + 3]
-                for i, sample in enumerate(samples):
-                    if sample >= 0.5:
-                        chosen_num = sample
-                        chosen_type = i
+            for i, sample in enumerate(samples):
+                if sample >= 0.5:
+                    chosen_num = sample
+                    chosen_type = i
+            if chosen_type != -69:
                 true_num = int(round(chosen_num)) if chosen_type > 2 else 1 # if defensive, do 1 at most
                 game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
                 move_board[x, y, 0] = true_num
