@@ -90,7 +90,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         opp_bits = game_state.get_resource(game_state.BITS, 1)
         
         if opp_bits >= 15:
-            for x in x5:
+            for x in x5_destructor:
                 game_state.attempt_spawn(DESTRUCTOR, [x, 10])
         else:
             self.build_shield_line(game_state)
@@ -99,8 +99,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         shields_built = True
         for p in self.shields[:15]:
             if not game_state.game_map[p[0], p[1]]:
-                shield_built = False
-        if not shield_built:
+                shields_built = False
+                
+        if not shields_built and game_state.get_resource(game_state.BITS, 1) >= 12:
             game_state.attempt_spawn(SCRAMBLER, [6, 7])
             game_state.attempt_spawn(SCRAMBLER, [21, 7])
         else:
