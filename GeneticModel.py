@@ -46,10 +46,10 @@ def init_weights(m):
             torch.nn.init.xavier_uniform(m.weight)
             m.bias.data.fill_(0.00)
 
-def mutate(agent):
+def mutate(agent, mutation_power=0.02):
     child_agent = copy.deepcopy(agent)
     
-    mutation_power = 0.02 #hyper-parameter, set from https://arxiv.org/pdf/1712.06567.pdf
+    # mutation_power = 0.002 hyper-parameter, set from https://arxiv.org/pdf/1712.06567.pdf
             
     for param in child_agent.parameters():
     

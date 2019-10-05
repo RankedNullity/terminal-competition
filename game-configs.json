@@ -5,7 +5,7 @@
     "printActStrings":false,
     "printHitStrings":false,
     "printPlayerInputStrings":false,
-    "printBotErrors":true,
+    "printBotErrors":false,
     "printPlayerGetHitStrings":false
   },
   "unitInformation":[

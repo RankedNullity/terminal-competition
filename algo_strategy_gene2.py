@@ -87,7 +87,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.scored_on_locations = []
         self.model = TerminalAI()        
         # TODO: Specificy file_path
-        # self.model.load_state_dict(torch.load('models/temp1'))
+        self.model.load_state_dict(torch.load('models/temp_model_2'))
         for param in self.model.parameters():
             param.requires_grad = False
         
@@ -194,7 +194,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         game engine.
         """
         game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of the Genetic-agent strategy'.format(game_state.turn_number))
+        #gamelib.debug_write('Performing turn {} of the Genetic-agent strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
         board_state, game_data = self.parse_serialized_string(turn_state)
         last_state, last_data = None, None
