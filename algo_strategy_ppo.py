@@ -107,11 +107,11 @@ class AlgoStrategy(gamelib.AlgoCore):
                 x, y = map(int, [sx, sy])
                 hp = float(shp)
                 if board[x, y, 0] == 0:
-					board[x, y, 1] += hp
-					board[x, y, 2] = player_number
-					board[x, y, 3] = i // 3
-					board[x, y, 4 + (i % 3)] = 1
-				board[x, y, 0] += 1
+                    board[x, y, 1] += hp
+                    board[x, y, 2] = player_number
+                    board[x, y, 3] = i // 3
+                    board[x, y, 4 + (i % 3)] = 1
+                board[x, y, 0] += 1
                 
                 # This depends on RM always being the last type to be processed
                 if unit_type == typedef[6]["shorthand"]:
@@ -149,7 +149,7 @@ class AlgoStrategy(gamelib.AlgoCore):
     def perform_action_using_output(self, output, game_state):
         '''Performs an action using the output of the PPO network, and submits using game_state'''
         # moveboard 28 x 14 half of the board [0: Num of units placed, 1: type of unit placed]
-		output = output.sample()
+        output = output.sample()
         move_board = np.zeros((28, 14, 2))
 
         # Assume output is 14x14x 18
@@ -163,27 +163,26 @@ class AlgoStrategy(gamelib.AlgoCore):
             x = rowNum + rowPos - 1
             y = 14 - rowNum
             #gamelib.debug_write("{}, {}".format[x, y])
-
-			if game_state.can_spawn(PING, [x, y]):
-				# sample from all 6 and choose unit type.
-				piece_type_probs = softmax(output[index:index + 6])
-				chosen_type = np.random.choice(np.arange(6), p=num_placement_probs)
-				chosen_num = output[index + chosen_type]
-				true_num = chosen_num if chosen_num > 2 else 1
-				game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
-				move_board[x, y, 0] = true_num
-				move_board[x, y, 1] = chosen_type
-				index += 3
-			else:
-				# sample from only the first 3  
-				piece_type_probs = softmax(output[index:index + 3])
-				chosen_type = np.random.choice(np.arange(3), p=num_placement_probs)
-				chosen_num = output[index + chosen_type]
-				true_num = chosen_num if chosen_num > 2 else 1
-				game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
-				move_board[x, y, 0] = true_num
-				move_board[x, y, 1] = chosen_type
-			index += 3
+            if game_state.can_spawn(PING, [x, y]):
+                # sample from all 6 and choose unit type.
+                piece_type_probs = softmax(output[index:index + 6])
+                chosen_type = np.random.choice(np.arange(6), p=num_placement_probs)
+                chosen_num = output[index + chosen_type]
+                true_num = chosen_num if chosen_num > 2 else 1
+                game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
+                move_board[x, y, 0] = true_num
+                move_board[x, y, 1] = chosen_type
+                index += 3
+            else:
+                # sample from only the first
+                piece_type_probs = softmax(output[index:index + 3])
+                np.random.choice(np.arange(3), p=num_placement_probs)
+                output[index + chosen_type]
+                chosen_num if chosen_num > 2 else 1
+                attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
+                move_board[x, y, 0] = true_num
+                move_board[x, y, 1] = chosen_type
+            index += 3
         self.actions.append(move_board)
         #gamelib.debug_write(move_board)
         return game_state
@@ -218,9 +217,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         linear_input = torch.cat((game_data, last_data), 0)
 
         conv_input = conv_input.view(-1, 1)
-		network_input = torch.cat((conv_input, linear_input), 0)
 		
-        network_output = self.model.forward(network_input)
+        network_output = self.model.forward(conv_input, linear_input)
         game_state = self.perform_action_using_output(network_output, game_state)
         with open('action_replay/actions.pickle', 'w') as f:
             pickle.dump(self.actions, f)
