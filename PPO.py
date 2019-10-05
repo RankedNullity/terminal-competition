@@ -115,7 +115,7 @@ for game_idx in range(N_GAMES):
     list_of_action_replays = glob.glob("action_replay/*.pickle")
     latest_action = max(list_of_action_replays, key=os.path.getctime)
     with open(latest_action):
-        actions = pickle.load(latest_action)
+        actions, rewards = pickle.load(latest_action)
     list_of_files = glob.glob("replays/*.replay") # * means all if need specific format then *.csv
     latest_file = max(list_of_files, key=os.path.getctime)
     assert latest_file.endswith(".replay")
@@ -126,12 +126,15 @@ for game_idx in range(N_GAMES):
             if line != "":
                 states.push(json.loads(line))
 
-    assert len(states) == len(actions), "Found {} states in replay file, but {} actions in action replay file."
+    print("{} actions, {} rewards".format(len(actions), len(rewards)))
+    # data.find('"winner":1') != -1 # to determine if we won
+    assert len(states) == len(actions) and len(actions) == len(rewards), "Found {} states in replay file, but {} actions in action replay file."
 
     log_probs = []
     values    = []
-    states    = []
-    rewards   = []
+    # actions   = []
+    # states    = []
+    # rewards   = []
     masks     = []
     entropy = 0
 
