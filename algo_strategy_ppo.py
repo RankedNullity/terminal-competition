@@ -168,6 +168,8 @@ class AlgoStrategy(gamelib.AlgoCore):
             x = rowNum + rowPos - 1
             y = 14 - rowNum
             #gamelib.debug_write("{}, {}".format[x, y])
+            chosen_num = -420
+            chosen_type = -69
             if game_state.can_spawn(PING, [x, y]):
                 # sample from all 6 and choose unit type.
                 samples = output[index:index + 6]
@@ -276,7 +278,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         for shield in events["shield"]:
             buff = shield[2]
             self.last_reward += SHIELD_REWARD if shield[4] == 1 else SHIELD_PUNISHMENT
-        for death in events["deaths"]:
+        for death in events["death"]:
             if not death[4]:
                 unitType = death[1]
                 self.last_reward += DEATH_REWARD[death[1]] if death[3] == 2 else DEATH_PUNISHMENT[death[1]]
