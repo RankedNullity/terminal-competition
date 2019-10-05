@@ -28,7 +28,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         gamelib.debug_write('Random seed: {}'.format(seed))
         self.shields = [[x, 7] for x in range(10, 20)]
         self.shields += [[12, y] for y in range(1, 6)]
-        self.shields = [[13, y] for y in range(2, 5)]
+        self.shields += [[13, y] for y in range(2, 5)]
         self.shields += [[x, 4] for x in range(14, 19)]
         self.shields += [[9, y] for y in range(4, 7)]
         self.shields += [[x, 8] for x in range(11, 20)]
