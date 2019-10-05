@@ -87,7 +87,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         for x in x4_destructor:
             game_state.attempt_spawn(DESTRUCTOR, [x, 12])
 
-        opp_bits = game_state.get_resource(game_state.bits, 1)
+        opp_bits = game_state.get_resource(game_state.BITS, 1)
         
         if opp_bits >= 15:
             for x in x5:
