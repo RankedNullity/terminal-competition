@@ -26,8 +26,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
-        self.shields = [[x, 7] for x in range(10, 20)]
-        self.shields += [[12, y] for y in range(1, 6)]
+        self.shields = [[12, y] for y in range(1, 6)]
+        self.shields += [[x, 7] for x in range(10, 20)]
+        self.shields += [[10, y] for y in range(3, 7)]
         self.shields += [[13, y] for y in range(2, 5)]
         self.shields += [[x, 4] for x in range(14, 19)]
         self.shields += [[9, y] for y in range(4, 7)]
@@ -100,11 +101,17 @@ class AlgoStrategy(gamelib.AlgoCore):
         for p in self.shields[:15]:
             if not game_state.game_map[p[0], p[1]]:
                 shields_built = False
-                
-        if not shields_built and game_state.get_resource(game_state.BITS, 1) >= 12:
+
+        opp_bits = game_state.get_resource(game_state.BITS, 1)
+        our_bits = game_state.get_resource(game_state.BITS, 0)
+        if not shields_built and opp_bits >= 12:
             game_state.attempt_spawn(SCRAMBLER, [6, 7])
             game_state.attempt_spawn(SCRAMBLER, [21, 7])
-        else:
+        elif not shields_built and opp_bits >= 20:
+            while game_state.can_spawn(SCRAMBLER, [3, 10]) or game_state.can_spawn(SCRAMBLER, [24, 10]):
+                game_state.attempt_spawn(SCRAMBLER, [3, 10])
+                game_state.attempt_spawn(SCRAMBLER, [24, 10])
+        elif shields_built or our_bits >= 20:
             while game_state.can_spawn(PING, [11, 2]):
                 game_state.attempt_spawn(PING, [11, 2])
     
