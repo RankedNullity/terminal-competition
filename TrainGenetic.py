@@ -42,7 +42,7 @@ use_cuda = torch.cuda.is_available()
 device   = torch.device("cuda" if use_cuda else "cpu")
 
 # initialize N number of agents
-num_agents = 250
+num_agents = 50
 agents = return_random_agents(num_agents)
 
 # How many top agents to consider as parents
@@ -52,13 +52,16 @@ top_limit = num_agents / 50
 generations = 100
 
 
-min_agent_games = 1
-total_games = num_agents * min_agent_games + 100
+min_agent_games = 5
+additional_games = 0
+total_games = num_agents * min_agent_games + additional_games
 
 
 replayDir = os.getcwd() + '\\replays'
 eliteDir = os.getcwd() + '\\models\\elites'
-
+f = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
+f.write("Starting Genetic Evolution")
+f.close()
 def update_stats(i, j):
     games_played[i] += 1
     games_played[j] += 1
@@ -84,7 +87,6 @@ def choose_n_gen_elites(n):
         ans.append(agent)
     return ans
     
-
 for generation in range(generations):
     rewards = np.zeros(num_agents)
     games_played = np.zeros(num_agents)
@@ -95,7 +97,7 @@ for generation in range(generations):
         agent1 = agents[i]
         torch.save(agent1.state_dict(), 'models\\temp_model_1')
         for j in matchups:
-            print("playing mandatory game: vs agent{} for agent {}".format(j, i))
+            print("playing mandatory game: agent {} vs agent {}".format(i, j))
             agent2 = agents[j]
             torch.save(agent2.state_dict(), 'models\\temp_model_2')
             run_single_game()
@@ -103,7 +105,7 @@ for generation in range(generations):
                     
     for game in range(total_games - min_agent_games * num_agents):
         match_pairing = np.random.choice(len(agents), 2, replace=False) 
-         print("playing random game: agent {} vs agent {}".format(match_pairing[0], match_pairing[1]))
+        print("playing random game: agent {} vs agent {}".format(match_pairing[0], match_pairing[1]))
         # Running a single game
         agent1 = agents[match_pairing[0]]
         agent2 = agents[match_pairing[1]]
@@ -125,12 +127,14 @@ for generation in range(generations):
         torch.save(agents[best_parent], 'models\\elites\\generation_' + generation + '_' + top_rewards[0])
     new_pop_array = new_pop.copy()
     
-    print("Generation ", generation, " | Mean rewards: ", np.mean(reward_ratio), " | Mean of top 5: ",np.mean(top_rewards[:5]))
-    print("Top ",top_limit," scorers", sorted_parent_indexes)
-    print("Rewards for top: ", top_rewards)
+    f = open(os.getcwd() + "\\models\\training_log.txt", 'a+')
+    f.write("Generation ", generation, " | Mean rewards: ", np.mean(reward_ratio), " | Mean of top 5: ",np.mean(top_rewards[:5]))
+    f.write("Top ",top_limit," scorers", sorted_parent_indexes)
+    f.write("Rewards for top: ", top_rewards)
+    f.close()
     
     # Save the top performing agent
-    torch.save(agents[sorted_parent_indexes[0]], 'models\\elites\\generation_' + generation + '_' + top_rewards[0])
+    #torch.save(agents[sorted_parent_indexes[0]], 'models\\elites\\generation_' + generation + '_' + top_rewards[0])
 
     # fill the new generation with children
     children = []
