@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.distributions import Normal
 
 num_inputs  = 10 # TODO envs.observation_space.shape[0]
 num_outputs = 10 # todo envs.action_space.shape[0]
