@@ -86,8 +86,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         pass
     
     def backup_strategy(self, game_state):
-        setup_unbreakable(game_state)
-        setup_attackers(game_state)
+        self.setup_unbreakable(game_state)
+        self.setup_attackers(game_state)
 
     def on_turn(self, turn_state):
         """
