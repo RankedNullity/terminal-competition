@@ -111,7 +111,7 @@ for generation in range(generations):
         agent1 = agents[i]
         torch.save(agent1.state_dict(), 'models\\temp_model_1')
         for j in matchups:
-            file.write("playing mandatory game: agent {} vs agent {}".format(i, j))
+            #file.write("playing mandatory game: agent {} vs agent {}".format(i, j))
             print("playing mandatory game: agent {} vs agent {}".format(i, j))
             agent2 = agents[j]
             torch.save(agent2.state_dict(), 'models\\temp_model_2')
@@ -136,10 +136,10 @@ for generation in range(generations):
     top_rewards = []
     new_pop = []
     
-    for best_parent in sorted_parent_indexes:
+    for i, best_parent in enumerate(sorted_parent_indexes):
         top_rewards.append(reward_ratio[best_parent])
         new_pop.append(agents[best_parent])
-        torch.save(agents[best_parent], 'models\\elites\\generation_' + str(generation) + '_' + str(best_parent))
+        torch.save(agents[best_parent].state_dict(), 'models\\elites\\generation_' + str(generation) + '_Top_' + str(i))
     new_pop_array = new_pop.copy()
     
     
