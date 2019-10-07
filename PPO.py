@@ -13,6 +13,7 @@ import os
 import subprocess
 import sys
 import json
+import pickle
 
 from model import ActorCritic
 
@@ -57,7 +58,7 @@ def test_env(vis=False):
                                                                                             
 def compute_gae(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
     values = values + [next_value]
-    gae = 0
+    gae = torch.zeros(1)
     returns = []
     for step in reversed(range(len(rewards))):
         delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
@@ -110,65 +111,66 @@ test_rewards = []
 N_GAMES = 100
 
 for game_idx in range(N_GAMES):
-    run_single_game("cd {} && java -jar engine.jar work {} {}".format(".", "./algo_strategy_ppo.py", "./algo_strategy_ppo.py"))
+    # run_single_game("cd {} && java -jar engine.jar work {} {}".format(".", "./algo_strategy_ppo.py", "./algo_strategy_ppo.py"))
 
     list_of_action_replays = glob.glob("action_replay/*.pickle")
     latest_action = max(list_of_action_replays, key=os.path.getctime)
-    with open(latest_action):
-        actions = pickle.load(latest_action)
+    with open(latest_action, "rb") as f:
+        actions, rewards, states = pickle.load(f)
     list_of_files = glob.glob("replays/*.replay") # * means all if need specific format then *.csv
     latest_file = max(list_of_files, key=os.path.getctime)
-    assert latest_file.endswith(".replay")
-    with open(latest_file) as f:
-        for line in f:
-            line = line.replace("\n", "")
-            line = line.replace("\t", "")
-            if line != "":
-                states.push(json.loads(line))
+    with open(latest_file, "r") as f:
+        data = "".join(f.readlines())
+        won = data.find('"winner":1') != -1
 
-    assert len(states) == len(actions), "Found {} states in replay file, but {} actions in action replay file."
+    print("{} actions, {} rewards, {} states".format(len(actions), len(rewards), len(states)))
+    assert len(states) == len(actions) and len(actions) == len(rewards), "Found {} states in replay file, {} actions in action replay file, {} rewards.".format(len(states), len(actions), len(rewards))
 
     log_probs = []
     values    = []
-    states    = []
-    rewards   = []
-    masks     = []
+    # actions   = []
+    # states    = []
+    # rewards   = []
+    masks     = torch.zeros((len(actions)))
     entropy = 0
 
     for i, (state, action) in enumerate(zip(states, actions)):
         state = torch.FloatTensor(state).to(device)
         dist, value = model(state)
+
+        action = torch.FloatTensor(action)
         
-        reward = 0 # compute reward here, using the next state if needed
-        done = 1 if i == len(states) - 1 else 0
+        # reward = 0 # compute reward here, using the next state if needed
+        not_done = 0.0 if i == len(states) - 1 else 1.0
         # next_state, reward, done, _ = envs.step(action.cpu().numpy())
-        
+
         log_prob = dist.log_prob(action)
         entropy += dist.entropy().mean()
         
         log_probs.append(log_prob)
         values.append(value)
-        rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(device))
-        masks.append(torch.FloatTensor(1 - done).unsqueeze(1).to(device))
+        # rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(device))
+        masks[i] = torch.FloatTensor([not_done]).to(device)
         
         # states.append(state)
         # actions.append(action)
         
         # state = next_state
         # frame_idx += 1
-                    
 
     # next_state = torch.FloatTensor(next_state).to(device)
     # _, next_value = model(next_state)
     # use last value
-    returns = compute_gae(value, rewards, masks, values)
+    final_value = 40 if won else -40
+    returns = compute_gae(final_value, rewards, masks, values)
     
-    returns   = torch.cat(returns).detach()
-    log_probs = torch.cat(log_probs).detach()
-    values    = torch.cat(values).detach()
-    states    = torch.cat(states)
-    actions   = torch.cat(actions)
-    advantage = returns - values
+    returns   = torch.stack(returns).detach()
+    log_probs = torch.stack(log_probs).detach()
+    values    = torch.stack(values).detach()
+    states    = torch.stack(states)
+    actions   = torch.stack(actions)
+    advantage = returns# - values
+    print("log probs {} values {}returns {} advantage {}".format(log_probs.size(), values.size(), returns.size(), advantage.size()))
     
     ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantage)
 

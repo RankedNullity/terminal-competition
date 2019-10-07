@@ -62,12 +62,14 @@ def parse_gamestate(game_state):
 		
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
+    gamelib.debug_write(x)
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
 class AlgoStrategy(gamelib.AlgoCore):
     def __init__(self):
         super().__init__()
+        self.last_reward = 0.0
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
@@ -76,7 +78,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """ 
         Read in config and perform any initial setup here 
         """
-        gamelib.debug_write('Configuring the genetically bred agent...')
+        gamelib.debug_write('Configuring the PPO- agent...')
         self.config = config
         global FILTER, ENCRYPTOR, DESTRUCTOR, PING, EMP, SCRAMBLER, PIECE_TO_INT, INT_TO_PIECE
         FILTER = config["unitInformation"][0]["shorthand"]
@@ -87,16 +89,20 @@ class AlgoStrategy(gamelib.AlgoCore):
         SCRAMBLER = config["unitInformation"][5]["shorthand"]
         # This is a good place to do initial setup
         self.scored_on_locations = []
-        self.model = TerminalAI()        
+        self.model = ActorCritic()        
         # TODO: Specificy file_path
         # self.model.load_state_dict(torch.load('models/temp1'))
-        for param in self.model.parameters():
-            param.requires_grad = False
+        # self.model.load_state_dict(torch.load('run/weights'))
+        self.model.eval()
+        # for param in self.model.parameters():
+        #     param.requires_grad = False
         
         self.actions = []
+        self.rewards = []
+        self.states = []
         self.last_board = None
         PIECE_TO_INT = {FILTER: 1, ENCRYPTOR: 2, DESTRUCTOR: 3, PING: 4, EMP: 5, SCRAMBLER: 6}
-        INT_TO_PIECE = {1: FILTER, 2: ENCRYPTOR, 3: DESTRUCTOR, 4: PING, 5: EMP, 6: SCRAMBLER }
+        INT_TO_PIECE = {0: FILTER, 1: ENCRYPTOR, 2: DESTRUCTOR, 3: PING, 4: EMP, 5: SCRAMBLER }
         
     def update_board(self, board, units, player_number):
         typedef = self.config.get("unitInformation")
@@ -107,14 +113,15 @@ class AlgoStrategy(gamelib.AlgoCore):
                 x, y = map(int, [sx, sy])
                 hp = float(shp)
                 if board[x, y, 0] == 0:
-                    board[x, y, 0] = i + 1
-                    board[x, y, 1] = hp
-                    board[x, y, 2] = player_number + 1
-                board[x, y, 3] += 1
+                    board[x, y, 1] += hp
+                    board[x, y, 2] = player_number
+                    board[x, y, 3] = i // 3
+                    board[x, y, 4 + (i % 3)] = 1
+                board[x, y, 0] += 1
                 
                 # This depends on RM always being the last type to be processed
                 if unit_type == typedef[6]["shorthand"]:
-                     board[x, y, 3] = -1
+                     board[x, y, 1] = -1
         return board
         
     def parse_serialized_string(self, serialized_string):
@@ -126,7 +133,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Channel 1: Piece HP
         # Channel 2: Piece Side [0 = empty, 1 = Friendly, 2 = Enemy]
         # Channel 3: Amount of Pieces (-1 = marked for removal)
-        board = np.zeros((28, 28, 4))
+        board = np.zeros((28, 28, 7))
         p1units = state["p1Units"]
         p2units = state["p2Units"]
         board = self.update_board(board, p1units, 0)
@@ -148,43 +155,40 @@ class AlgoStrategy(gamelib.AlgoCore):
     def perform_action_using_output(self, output, game_state):
         '''Performs an action using the output of the PPO network, and submits using game_state'''
         # moveboard 28 x 14 half of the board [0: Num of units placed, 1: type of unit placed]
-        move_board = np.zeros((28, 14, 2))
+        raw_action = output.sample()
+        output = raw_action.numpy()
+        # move_board = np.zeros((28, 14, 2))
 
         # Assume output is 14x14x 18
         row_cutoffs = [x for x in range(28, -1 ,-2)]
         cum_row_cutoff = [sum(row_cutoffs[0:x]) for x in range(len(row_cutoffs))]
-        rowNum = 0
+        index = rowNum = 0
         for i in range(14 * 15):
             if i >= cum_row_cutoff[rowNum]:
                 rowNum += 1
-            rowPos = i - cum_row_cutoff[rowNum]
-            x = rowNum + rowPos
-            y = 13 - rowNum
-            index = i * 18
-            num_placement_probs = softmax(output[index:index + 12])
-            chosen_num = np.random.choice(np.arange(-1, 11), p=num_placement_probs)
-            if chosen_num == -1:
-                game_state.attempt_remove((x, y))
-                move_board[x, y, 0] = -1
-            elif chosen_num != 0:
-                index += 12
-                if game_state.can_spawn(PING, (x,y)):
-                    # sample from all 6 and choose unit type.
-                    piece_type_probs = softmax(output[index:index + 6])
-                    chosen_type = np.random.choice(np.arange(1,7), p=piece_type_probs)
-                    true_num = chosen_num if chosen_num > 3 else 1
-                    game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y), true_num)
-                    move_board[x, y, 0] = true_num
-                    move_board[x, y, 1] = chosen_type
-                else:
-                    # sample from only the first 3                           
-                    piece_type_probs = softmax(output[index:index + 3])
-                    chosen_type = np.random.choice(np.arange(1,4), p=piece_type_probs)
-                    game_state.attempt_spawn(INT_TO_PIECE[chosen_type], (x,y))
-                    true_num = chosen_num if chosen_num > 3 else 1
-                    move_board[x, y, 0] = true_num
-                    move_board[x, y, 1] = chosen_type
-        self.actions.append(move_board)
+            rowPos = i - cum_row_cutoff[rowNum - 1]
+            x = rowNum + rowPos - 1
+            y = 14 - rowNum
+            #gamelib.debug_write("{}, {}".format[x, y])
+            chosen_num = -420
+            chosen_type = -69
+            if game_state.can_spawn(PING, [x, y]):
+                # sample from all 6 and choose unit type.
+                samples = output[index:index + 6]
+            else:
+                samples = output[index:index + 3]
+            for i, sample in enumerate(samples):
+                if sample >= 0.5:
+                    chosen_num = sample
+                    chosen_type = i
+            if chosen_type != -69:
+                true_num = int(round(chosen_num)) if chosen_type > 2 else 1 # if defensive, do 1 at most
+                game_state.attempt_spawn(INT_TO_PIECE[chosen_type], [x, y], true_num)
+                # move_board[x, y, 0] = true_num
+                # move_board[x, y, 1] = chosen_type
+            index += 3
+        self.actions.append(raw_action)
+        return game_state
 
 
     def on_turn(self, turn_state):
@@ -195,8 +199,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         unit deployments, and transmitting your intended deployments to the
         game engine.
         """
+        self.rewards.append(self.last_reward)
+
         game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of the Genetic-agent strategy'.format(game_state.turn_number))
+        gamelib.debug_write('Performing turn {} of the PPO-agent strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
         board_state, game_data = self.parse_serialized_string(turn_state)
         last_state, last_data = None, None
@@ -206,6 +212,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         else:
             last_state = self.last_board[0]
             last_data = self.last_board[1]
+
         board_state = torch.FloatTensor(board_state)
         game_data = torch.FloatTensor(game_data)
         last_state = torch.FloatTensor(last_state)
@@ -213,14 +220,18 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         conv_input = torch.cat((board_state, last_state), 0)
         linear_input = torch.cat((game_data, last_data), 0)
+        # gamelib.debug_write("game_data: {}, last_data: {}, res: {}".format(game_data.size(), last_data.size(), linear_input.size()))
 
-        conv_input = conv_input.permute(2, 1, 0).unsqueeze(0)
-        conv_input = conv_input.float()
+        conv_input = conv_input.flatten()
 		
-        network_output = self.model.forward(conv_input, linear_input)
-        self.perform_action_using_output(network_output.numpy(), game_state)
-        with open('action_replay/actions.pickle', 'w') as f:
-            pickle.dump(self.actions, f)
+        Q = torch.cat((conv_input, linear_input))
+        self.states.append(Q)
+        action_dist, value = self.model(Q)
+        game_state = self.perform_action_using_output(action_dist, game_state)
+        with open('action_replay/actions.pickle', 'wb') as f:
+            pickle.dump((self.actions, self.rewards, self.states), f)
+
+        self.last_reward = 0.0
         game_state.submit_turn()
         
     def on_action_frame(self, turn_string):
@@ -236,6 +247,36 @@ class AlgoStrategy(gamelib.AlgoCore):
         if turnInfo[2] == 0:
             board, data = self.parse_serialized_string(turn_string)
             self.last_board = (board, data)
+
+        if turnInfo[0] != 1:
+            return
+
+        # process rewards
+        BREACH_REWARD = 2.0
+        BREACH_PUNISHMENT = -2.0
+        DMG_REWARD = 0.1
+        DMG_PUNISHMENT = -0.1
+        SHIELD_REWARD = 0.3
+        SHIELD_PUNISHMENT = -0.2
+        #filter , encryptor, destructor, ping, emp, scrambler
+        DEATH_REWARD = [0.2, 0.16, 0.25, 0.04, 0.25, 0.08]
+        DEATH_PUNISHMENT = [-0.3, -0.1, -0.2, -0.05, -0.4, -0.05]
+
+        events = state["events"]
+        for breach in events["breach"]:
+            # dmg = breach[1]
+            # 1 = we breached, gucci; 2 = enemy breached, we bacci
+            self.last_reward += BREACH_REWARD if breach[4] == 1 else BREACH_PUNISHMENT
+        for damage in events["damage"]:
+            dmg = damage[1] #4p
+            self.last_reward += dmg * (DMG_REWARD if damage[4] == 1 else DMG_PUNISHMENT)
+        for shield in events["shield"]:
+            buff = shield[2]
+            self.last_reward += SHIELD_REWARD if shield[4] == 1 else SHIELD_PUNISHMENT
+        for death in events["death"]:
+            if not death[4]:
+                unitType = death[1]
+                self.last_reward += DEATH_REWARD[death[1]] if death[3] == 2 else DEATH_PUNISHMENT[death[1]]
 
 
 if __name__ == "__main__":
